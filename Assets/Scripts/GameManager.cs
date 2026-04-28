@@ -1,8 +1,8 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text orderText;
     public TMP_Text scoreText;
     public TMP_Text timerText;
+    public TMP_Text feedbackText;
 
     [Header("Game Over")]
     public GameObject gameOverPanel;
@@ -17,10 +18,9 @@ public class GameManager : MonoBehaviour
 
     [Header("Plate")]
     public Transform plateContent;
+    public DropZone plateDropZone;
 
     [Header("Cooking")]
-    public Slider cookingSlider;
-    public Image cookingFillImage;
     public GameObject cookedSteakItem;
     public GameObject burntSteakItem;
 
@@ -31,57 +31,23 @@ public class GameManager : MonoBehaviour
     private float timeLeft = 60f;
     private bool isGameOver = false;
 
-    private bool isCookingSteak = false;
-    private bool cookedSteakReady = false;
-    private bool burntSteakReady = false;
+    // 🔥 COMBO
+    private int comboCount = 0;
+    private int maxComboBonus = 25;
 
-    private float cookingValue = 0f;
-    private float cookedSteakTimer = 5f;
-
-    private List<List<string>> recipes = new List<List<string>>()
-    {
-        new List<string>() { "Pain", "Steak Cuit", "Fromage" },
-        new List<string>() { "Pain", "Steak Cuit", "Salade" },
-        new List<string>() { "Pain", "Fromage", "Tomate" },
-        new List<string>() { "Salade", "Tomate", "Fromage" }
-    };
+    // 🗑 POUBELLE
+    private int trashCount = 0;
 
     void Start()
     {
-        scoreText.text = "Score : 0";
-        timerText.text = "Temps : 60";
-
-        if (gameOverPanel != null)
-            gameOverPanel.SetActive(false);
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
-
-        if (cookingSlider != null)
-        {
-            cookingSlider.minValue = 0f;
-            cookingSlider.maxValue = 100f;
-            cookingSlider.value = 0f;
-        }
-
-        UpdateCookingBarColor();
         GenerateRandomRecipe();
+        scoreText.text = "Score : 0";
     }
 
     void Update()
     {
         if (isGameOver) return;
 
-        UpdateTimer();
-        UpdateSteakCooking();
-        UpdateCookedSteakTimer();
-    }
-
-    void UpdateTimer()
-    {
         if (timeLeft > 0)
         {
             timeLeft -= Time.deltaTime;
@@ -93,241 +59,78 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void UpdateSteakCooking()
-    {
-        if (!isCookingSteak) return;
-
-        cookingValue += Time.deltaTime * 35f;
-        cookingSlider.value = cookingValue;
-        UpdateCookingBarColor();
-
-        if (cookingValue >= 100f)
-        {
-            SteakReady();
-        }
-    }
-
-    void UpdateCookedSteakTimer()
-    {
-        if (!cookedSteakReady) return;
-
-        cookedSteakTimer -= Time.deltaTime;
-
-        if (cookedSteakTimer <= 0f)
-        {
-            BurnSteak();
-        }
-    }
-
+    // 🔥 AJOUT INGREDIENT
     public void AddIngredient(string ingredient)
     {
-        if (isGameOver) return;
-
         currentIngredients.Add(ingredient);
-        Debug.Log("Liste actuelle : " + string.Join(", ", currentIngredients));
     }
 
+    // 🔥 VALIDATION RECETTE
     public void ValidateRecipe()
     {
-        if (isGameOver) return;
-
-        bool recipeIsCorrect = CompareRecipesWithoutOrder(currentIngredients, targetRecipe);
-
-        if (recipeIsCorrect)
+        if (currentIngredients.Count != targetRecipe.Count)
         {
-            Debug.Log("✅ Bonne recette !");
-            score += 10;
-            scoreText.text = "Score : " + score;
-
-            ClearPlate();
-            GenerateRandomRecipe();
-        }
-        else
-        {
-            Debug.Log("❌ Mauvaise recette");
-            score = Mathf.Max(0, score - 5);
-            scoreText.text = "Score : " + score;
-
-            ClearPlate();
-        }
-    }
-
-    bool CompareRecipesWithoutOrder(List<string> playerRecipe, List<string> targetRecipe)
-    {
-        if (playerRecipe.Count != targetRecipe.Count)
-            return false;
-
-        List<string> playerCopy = new List<string>(playerRecipe);
-        List<string> targetCopy = new List<string>(targetRecipe);
-
-        playerCopy.Sort();
-        targetCopy.Sort();
-
-        for (int i = 0; i < targetCopy.Count; i++)
-        {
-            if (playerCopy[i] != targetCopy[i])
-                return false;
+            BadRecipe();
+            return;
         }
 
-        return true;
-    }
+        List<string> tempCurrent = new List<string>(currentIngredients);
+        List<string> tempTarget = new List<string>(targetRecipe);
 
-    void ClearPlate()
-    {
-        currentIngredients.Clear();
+        tempCurrent.Sort();
+        tempTarget.Sort();
 
-        if (plateContent != null)
+        for (int i = 0; i < tempTarget.Count; i++)
         {
-            foreach (Transform child in plateContent)
+            if (tempCurrent[i] != tempTarget[i])
             {
-                Destroy(child.gameObject);
+                BadRecipe();
+                return;
             }
         }
+
+        // ✅ BONNE RECETTE
+        comboCount++;
+
+        int pointsToAdd = 10 + ((comboCount - 1) * 5);
+        pointsToAdd = Mathf.Min(pointsToAdd, maxComboBonus);
+
+        score += pointsToAdd;
+        scoreText.text = "Score : " + score;
+
+        ShowFeedback("✔ Combo x" + comboCount + " +" + pointsToAdd, Color.green);
+
+        ClearPlate();
+        GenerateRandomRecipe();
     }
 
-    void GenerateRandomRecipe()
+    void BadRecipe()
     {
-        int randomIndex;
+        comboCount = 0;
+        trashCount = 0;
 
-        do
-        {
-            randomIndex = Random.Range(0, recipes.Count);
-        }
-        while (recipes[randomIndex] == targetRecipe && recipes.Count > 1);
+        score = Mathf.Max(0, score - 5);
+        scoreText.text = "Score : " + score;
 
-        targetRecipe = new List<string>(recipes[randomIndex]);
-        orderText.text = "Commande : " + string.Join(" + ", targetRecipe);
+        ShowFeedback("❌ Mauvaise recette -5 (combo reset)", Color.red);
 
-        Debug.Log("Nouvelle commande : " + string.Join(", ", targetRecipe));
+        ClearPlate();
     }
 
-    public void StartSteakCooking()
-    {
-        if (isGameOver) return;
-        if (isCookingSteak || cookedSteakReady || burntSteakReady) return;
-
-        isCookingSteak = true;
-        cookingValue = 0f;
-        cookedSteakTimer = 5f;
-
-        cookingSlider.value = 0f;
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
-
-        UpdateCookingBarColor();
-
-        Debug.Log("🔥 Cuisson du steak démarrée");
-    }
-
-    void SteakReady()
-    {
-        isCookingSteak = false;
-        cookedSteakReady = true;
-        burntSteakReady = false;
-        cookedSteakTimer = 5f;
-
-        cookedSteakItem.SetActive(true);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
-
-        UpdateCookingBarColor();
-
-        Debug.Log("✅ Steak cuit prêt ! Tu as 5 secondes pour le prendre");
-    }
-
-    void BurnSteak()
-    {
-        isCookingSteak = false;
-        cookedSteakReady = false;
-        burntSteakReady = true;
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(true);
-
-        cookingSlider.value = 100f;
-        UpdateCookingBarColor();
-
-        Debug.Log("❌ Steak brûlé");
-    }
-
-    public void CookedSteakTaken()
-    {
-        cookedSteakReady = false;
-        burntSteakReady = false;
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
-
-        cookingValue = 0f;
-        cookedSteakTimer = 5f;
-        cookingSlider.value = 0f;
-        UpdateCookingBarColor();
-
-        Debug.Log("🥩 Steak cuit récupéré");
-    }
-
-    public void BurntSteakTaken()
-    {
-        isCookingSteak = false;
-        cookedSteakReady = false;
-        burntSteakReady = false;
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        cookingValue = 0f;
-        cookedSteakTimer = 5f;
-
-        if (cookingSlider != null)
-            cookingSlider.value = 0f;
-
-        UpdateCookingBarColor();
-
-        Debug.Log("💀 Steak brûlé retiré de la poêle");
-    }
-
-    void UpdateCookingBarColor()
-    {
-        if (cookingFillImage == null) return;
-
-        if (burntSteakReady)
-        {
-            cookingFillImage.color = Color.black;
-        }
-        else if (cookedSteakReady)
-        {
-            cookingFillImage.color = Color.green;
-        }
-        else if (isCookingSteak)
-        {
-            cookingFillImage.color = Color.yellow;
-        }
-        else
-        {
-            cookingFillImage.color = Color.white;
-        }
-    }
+    // 🗑 POUBELLE
     public void TrashIngredient(string ingredient)
     {
         if (isGameOver) return;
 
-        score = Mathf.Max(0, score - 1);
+        trashCount++;
+        comboCount = 0;
+
+        score = Mathf.Max(0, score - trashCount);
         scoreText.text = "Score : " + score;
 
+        ShowFeedback("🗑 -" + trashCount + " (combo perdu)", Color.yellow);
+
+        // Reset cuisson si steak
         if (ingredient == "Steak Cuit")
         {
             CookedSteakTaken();
@@ -337,19 +140,82 @@ public class GameManager : MonoBehaviour
         {
             BurntSteakTaken();
         }
-
-        Debug.Log("🗑️ " + ingredient + " jeté. -1 point");
     }
+
+    // 🔥 RESET STEAK CUIT
+    public void CookedSteakTaken()
+    {
+        if (cookedSteakItem != null)
+            cookedSteakItem.SetActive(false);
+    }
+
+    // 🔥 RESET STEAK BRULE
+    public void BurntSteakTaken()
+    {
+        if (burntSteakItem != null)
+            burntSteakItem.SetActive(false);
+    }
+
+    // 🔥 GENERATION RECETTE
+    void GenerateRandomRecipe()
+    {
+        targetRecipe.Clear();
+
+        targetRecipe.Add("Pain");
+
+        if (Random.value > 0.5f)
+            targetRecipe.Add("Steak Cuit");
+
+        if (Random.value > 0.5f)
+            targetRecipe.Add("Fromage");
+
+        if (Random.value > 0.5f)
+            targetRecipe.Add("Tomate");
+
+        if (Random.value > 0.5f)
+            targetRecipe.Add("Salade");
+
+        orderText.text = "Commande : " + string.Join(" + ", targetRecipe);
+    }
+
+    // 🔥 CLEAR ASSIETTE
+    void ClearPlate()
+    {
+        currentIngredients.Clear();
+
+        if (plateDropZone != null)
+        {
+            plateDropZone.ClearVisualPlate();
+        }
+    }
+
+    // 🎯 FEEDBACK
+    void ShowFeedback(string message, Color color)
+    {
+        StopAllCoroutines();
+
+        feedbackText.text = message;
+        feedbackText.color = color;
+
+        StartCoroutine(HideFeedback());
+    }
+
+    IEnumerator HideFeedback()
+    {
+        yield return new WaitForSeconds(1.5f);
+        feedbackText.text = "";
+    }
+
+    // 🔥 GAME OVER
     void EndGame()
     {
         isGameOver = true;
 
         gameOverPanel.SetActive(true);
         gameOverText.text = "GAME OVER\nScore : " + score;
-
-        Debug.Log("Fin du jeu");
     }
 
+    // 🔄 RESTART
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);

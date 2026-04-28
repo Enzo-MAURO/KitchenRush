@@ -8,30 +8,71 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
     private Canvas canvas;
-    private Vector2 startPosition;
+    private bool createdFromSource = false;
+    private bool droppedSuccessfully = false;
 
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
         canvas = GetComponentInParent<Canvas>();
-        startPosition = rectTransform.anchoredPosition;
+
+        if (canvasGroup == null)
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+    }
+
+    public void StartDragFromSource()
+    {
+        createdFromSource = true;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        startPosition = rectTransform.anchoredPosition;
+        droppedSuccessfully = false;
         canvasGroup.blocksRaycasts = false;
+        MoveToMouse(eventData);
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
+        MoveToMouse(eventData);
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         canvasGroup.blocksRaycasts = true;
-        rectTransform.anchoredPosition = startPosition;
+
+        if (createdFromSource && !droppedSuccessfully)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void MoveToMouse(PointerEventData eventData)
+    {
+        RectTransform canvasRect = canvas.transform as RectTransform;
+
+        Camera cam = null;
+        if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            cam = canvas.worldCamera;
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            canvasRect,
+            eventData.position,
+            cam,
+            out Vector2 localPoint
+        );
+
+        rectTransform.anchoredPosition = localPoint;
+    }
+
+    public void MarkDropped()
+    {
+        droppedSuccessfully = true;
+
+        if (createdFromSource)
+        {
+            Destroy(gameObject);
+        }
     }
 }
