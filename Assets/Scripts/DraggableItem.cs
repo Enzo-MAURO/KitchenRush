@@ -4,12 +4,17 @@ using UnityEngine.EventSystems;
 public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public string ingredientName;
+    public bool destroyAfterDrop = true;
+
+    public static DraggableItem CurrentDraggedItem;
 
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
     private Canvas canvas;
+
+    private Vector2 startPosition;
     private bool createdFromSource = false;
-    private bool droppedSuccessfully = false;
+    private bool wasDropped = false;
 
     void Awake()
     {
@@ -21,14 +26,17 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
-    public void StartDragFromSource()
+    public void SetCreatedFromSource(bool value)
     {
-        createdFromSource = true;
+        createdFromSource = value;
+        destroyAfterDrop = value;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        droppedSuccessfully = false;
+        CurrentDraggedItem = this;
+        wasDropped = false;
+        startPosition = rectTransform.anchoredPosition;
         canvasGroup.blocksRaycasts = false;
         MoveToMouse(eventData);
     }
@@ -42,37 +50,55 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     {
         canvasGroup.blocksRaycasts = true;
 
-        if (createdFromSource && !droppedSuccessfully)
+        if (!wasDropped)
         {
-            Destroy(gameObject);
+            if (createdFromSource)
+                Destroy(gameObject);
+            else
+                rectTransform.anchoredPosition = startPosition;
         }
+
+        if (CurrentDraggedItem == this)
+            CurrentDraggedItem = null;
     }
 
-    private void MoveToMouse(PointerEventData eventData)
+    void MoveToMouse(PointerEventData eventData)
     {
-        RectTransform canvasRect = canvas.transform as RectTransform;
-
-        Camera cam = null;
-        if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            cam = canvas.worldCamera;
-
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvasRect,
+            canvas.transform as RectTransform,
             eventData.position,
-            cam,
-            out Vector2 localPoint
+            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera,
+            out Vector2 pos
         );
 
-        rectTransform.anchoredPosition = localPoint;
+        rectTransform.anchoredPosition = pos;
     }
 
     public void MarkDropped()
     {
-        droppedSuccessfully = true;
+        wasDropped = true;
+        canvasGroup.blocksRaycasts = true;
 
-        if (createdFromSource)
-        {
+        if (CurrentDraggedItem == this)
+            CurrentDraggedItem = null;
+
+        if (destroyAfterDrop)
             Destroy(gameObject);
-        }
+        else
+            rectTransform.anchoredPosition = startPosition;
+    }
+
+    public void ForceResetDrag()
+    {
+        wasDropped = true;
+
+        if (canvasGroup != null)
+            canvasGroup.blocksRaycasts = true;
+
+        if (CurrentDraggedItem == this)
+            CurrentDraggedItem = null;
+
+        if (rectTransform != null)
+            rectTransform.anchoredPosition = startPosition;
     }
 }

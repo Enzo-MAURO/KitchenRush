@@ -4,10 +4,8 @@ using UnityEngine.UI;
 
 public class DropZone : MonoBehaviour, IDropHandler
 {
-    [Header("Zone burger")]
     public Transform plateContent;
 
-    [Header("Sprites burger")]
     public Sprite painBasSprite;
     public Sprite painHautSprite;
     public Sprite steakSprite;
@@ -23,65 +21,55 @@ public class DropZone : MonoBehaviour, IDropHandler
     private bool hasSalade = false;
     private bool hasSteakBrule = false;
 
-    private GameObject painBasObj;
-    private GameObject painHautObj;
-    private GameObject steakObj;
-    private GameObject fromageObj;
-    private GameObject tomateObj;
-    private GameObject saladeObj;
-    private GameObject steakBruleObj;
-
     public void OnDrop(PointerEventData eventData)
     {
-        DraggableItem item = eventData.pointerDrag.GetComponent<DraggableItem>();
+        DraggableItem item = GetDraggedItem(eventData);
         if (item == null) return;
+
+        string ingredient = item.ingredientName;
 
         GameManager gm = FindObjectOfType<GameManager>();
 
         if (gm != null)
         {
-            gm.AddIngredient(item.ingredientName);
-
-            if (item.ingredientName == "Steak Cuit")
-                gm.CookedSteakTaken();
-
-            if (item.ingredientName == "Steak Brûlé")
-                gm.BurntSteakTaken();
+            gm.AddIngredient(ingredient);
         }
 
-        AddVisualIngredient(item.ingredientName);
-
+        AddVisualIngredient(ingredient);
         item.MarkDropped();
 
-        Debug.Log("Déposé dans l'assiette : " + item.ingredientName);
+        if (gm != null)
+        {
+            if (ingredient == "Steak Cuit")
+                gm.CookedSteakTaken();
+
+            if (ingredient == "Steak Brûlé")
+                gm.BurntSteakTaken();
+
+            if (ingredient == "Frites")
+                gm.FriesTaken();
+        }
+    }
+
+    DraggableItem GetDraggedItem(PointerEventData eventData)
+    {
+        if (eventData.pointerDrag != null)
+        {
+            DraggableItem item = eventData.pointerDrag.GetComponent<DraggableItem>();
+            if (item != null) return item;
+        }
+
+        return DraggableItem.CurrentDraggedItem;
     }
 
     void AddVisualIngredient(string ingredient)
     {
-        if (ingredient == "Pain")
-        {
-            hasPain = true;
-        }
-        else if (ingredient == "Steak Cuit")
-        {
-            hasSteak = true;
-        }
-        else if (ingredient == "Fromage")
-        {
-            hasFromage = true;
-        }
-        else if (ingredient == "Tomate")
-        {
-            hasTomate = true;
-        }
-        else if (ingredient == "Salade")
-        {
-            hasSalade = true;
-        }
-        else if (ingredient == "Steak Brûlé")
-        {
-            hasSteakBrule = true;
-        }
+        if (ingredient == "Pain") hasPain = true;
+        if (ingredient == "Steak Cuit") hasSteak = true;
+        if (ingredient == "Fromage") hasFromage = true;
+        if (ingredient == "Tomate") hasTomate = true;
+        if (ingredient == "Salade") hasSalade = true;
+        if (ingredient == "Steak Brûlé") hasSteakBrule = true;
 
         RebuildBurgerVisual();
     }
@@ -94,68 +82,72 @@ public class DropZone : MonoBehaviour, IDropHandler
 
         if (hasPain)
         {
-            painBasObj = CreateLayer("Pain Bas", painBasSprite, new Vector2(180, 45), y);
+            CreateLayer("Pain Bas", painBasSprite, new Vector2(190, 45), y);
             y += 28f;
         }
 
         if (hasSteak)
         {
-            steakObj = CreateLayer("Steak", steakSprite, new Vector2(170, 42), y);
+            CreateLayer("Steak Cuit", steakSprite, new Vector2(175, 42), y);
             y += 30f;
         }
 
         if (hasSteakBrule)
         {
-            steakBruleObj = CreateLayer("Steak Brûlé", steakBruleSprite, new Vector2(170, 42), y);
+            CreateLayer("Steak Brûlé", steakBruleSprite, new Vector2(175, 42), y);
             y += 30f;
         }
 
         if (hasFromage)
         {
-            fromageObj = CreateLayer("Fromage", fromageSprite, new Vector2(185, 34), y);
+            CreateLayer("Fromage", fromageSprite, new Vector2(190, 34), y);
             y += 24f;
         }
 
         if (hasTomate)
         {
-            tomateObj = CreateLayer("Tomate", tomateSprite, new Vector2(165, 32), y);
+            CreateLayer("Tomate", tomateSprite, new Vector2(165, 32), y);
             y += 24f;
         }
 
         if (hasSalade)
         {
-            saladeObj = CreateLayer("Salade", saladeSprite, new Vector2(190, 35), y);
+            CreateLayer("Salade", saladeSprite, new Vector2(195, 35), y);
             y += 26f;
         }
 
         if (hasPain)
         {
-            painHautObj = CreateLayer("Pain Haut", painHautSprite, new Vector2(190, 60), y);
+            CreateLayer("Pain Haut", painHautSprite, new Vector2(200, 60), y);
         }
     }
 
-    GameObject CreateLayer(string objectName, Sprite sprite, Vector2 size, float yPosition)
+    void CreateLayer(string name, Sprite sprite, Vector2 size, float y)
     {
-        GameObject layer = new GameObject(objectName);
-        layer.transform.SetParent(plateContent, false);
+        if (sprite == null)
+        {
+            Debug.LogWarning("Sprite manquant : " + name);
+            return;
+        }
 
-        Image img = layer.AddComponent<Image>();
+        GameObject obj = new GameObject(name);
+        obj.transform.SetParent(plateContent, false);
+
+        Image img = obj.AddComponent<Image>();
         img.sprite = sprite;
         img.preserveAspect = true;
+        img.raycastTarget = false;
+        img.color = Color.white;
 
-        RectTransform rt = layer.GetComponent<RectTransform>();
+        RectTransform rt = obj.GetComponent<RectTransform>();
         rt.sizeDelta = size;
-        rt.anchoredPosition = new Vector2(0, yPosition);
-
-        return layer;
+        rt.anchoredPosition = new Vector2(0, y);
     }
 
     void ClearVisualObjectsOnly()
     {
         foreach (Transform child in plateContent)
-        {
             Destroy(child.gameObject);
-        }
     }
 
     public void ClearVisualPlate()

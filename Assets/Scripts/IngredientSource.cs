@@ -16,8 +16,9 @@ public class IngredientSource : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         if (currentDraggedItem != null)
         {
-            currentDraggedItem.StartDragFromSource();
+            currentDraggedItem.SetCreatedFromSource(true);
             currentDraggedItem.OnBeginDrag(eventData);
+
             eventData.pointerDrag = newItem;
         }
     }
@@ -25,9 +26,7 @@ public class IngredientSource : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     public void OnDrag(PointerEventData eventData)
     {
         if (currentDraggedItem != null)
-        {
             currentDraggedItem.OnDrag(eventData);
-        }
     }
 
     public void OnEndDrag(PointerEventData eventData)

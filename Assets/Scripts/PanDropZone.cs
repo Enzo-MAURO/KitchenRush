@@ -5,20 +5,28 @@ public class PanDropZone : MonoBehaviour, IDropHandler
 {
     public void OnDrop(PointerEventData eventData)
     {
-        // On récupère l'objet drag
-        DraggableItem item = eventData.pointerDrag.GetComponent<DraggableItem>();
+        DraggableItem item = GetDraggedItem(eventData);
+        if (item == null) return;
 
-        // Si c'est bien un item et que c'est un steak
-        if (item != null && item.ingredientName == "Steak")
+        if (item.ingredientName == "Steak" || item.ingredientName == "Steak Cru")
         {
             GameManager gm = FindObjectOfType<GameManager>();
 
             if (gm != null)
-            {
                 gm.StartSteakCooking();
-            }
 
-            Debug.Log("?? Steak déposé dans la poêle");
+            item.MarkDropped();
         }
+    }
+
+    DraggableItem GetDraggedItem(PointerEventData eventData)
+    {
+        if (eventData.pointerDrag != null)
+        {
+            DraggableItem item = eventData.pointerDrag.GetComponent<DraggableItem>();
+            if (item != null) return item;
+        }
+
+        return DraggableItem.CurrentDraggedItem;
     }
 }
