@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text orderText;
     public TMP_Text scoreText;
     public TMP_Text timerText;
+    public TMP_Text comboText;
     public TMP_Text feedbackText;
 
     [Header("Game Over")]
@@ -23,9 +24,9 @@ public class GameManager : MonoBehaviour
     [Header("Steak Visuals In Pan")]
     public Slider cookingSlider;
     public Image cookingFillImage;
-    public GameObject cookingSteakItem; // visuel steak cru dans la poêle
-    public GameObject cookedSteakItem;  // visuel steak cuit dans la poêle
-    public GameObject burntSteakItem;   // visuel steak brûlé dans la poêle
+    public GameObject cookingSteakItem;
+    public GameObject cookedSteakItem;
+    public GameObject burntSteakItem;
 
     [Header("Steak Drag Prefabs")]
     public GameObject steakCuitPrefab;
@@ -36,11 +37,14 @@ public class GameManager : MonoBehaviour
     [Header("Fryer")]
     public GameObject normalBackground;
     public GameObject fryerCookingBackground;
+    public GameObject fryerReadyBackground;
     public GameObject friesReadyItem;
     public float friesCookingTime = 15f;
+    public int maxFriesPortions = 3;
 
     private float friesTimer = 0f;
     private bool friesCooking = false;
+    private int friesPortionsLeft = 0;
 
     private List<string> currentIngredients = new List<string>();
     private List<string> targetRecipe = new List<string>();
@@ -65,6 +69,10 @@ public class GameManager : MonoBehaviour
     {
         scoreText.text = "0";
         timerText.text = FormatTime(timeLeft);
+        UpdateComboText();
+
+        if (feedbackText != null)
+            feedbackText.text = "";
 
         if (gameOverPanel != null)
             gameOverPanel.SetActive(false);
@@ -79,6 +87,9 @@ public class GameManager : MonoBehaviour
 
         if (fryerCookingBackground != null)
             fryerCookingBackground.SetActive(false);
+
+        if (fryerReadyBackground != null)
+            fryerReadyBackground.SetActive(false);
 
         if (cookingSlider != null)
         {
@@ -117,6 +128,16 @@ public class GameManager : MonoBehaviour
         {
             EndGame();
         }
+    }
+
+    void UpdateComboText()
+    {
+        if (comboText == null) return;
+
+        if (comboCount <= 0)
+            comboText.text = "x0";
+        else
+            comboText.text = "x" + comboCount;
     }
 
     public void AddIngredient(string ingredient)
@@ -160,8 +181,9 @@ public class GameManager : MonoBehaviour
 
             score += points;
             scoreText.text = score.ToString();
+            UpdateComboText();
 
-            ShowFeedback("✔ x" + comboCount + " +" + points, Color.green);
+            ShowFeedback("Bonne recette +" + points, Color.green);
 
             ClearPlateAndCooking();
             GenerateRandomRecipe();
@@ -173,26 +195,30 @@ public class GameManager : MonoBehaviour
 
             score = Mathf.Max(0, score - 5);
             scoreText.text = score.ToString();
+            UpdateComboText();
 
-            ShowFeedback("❌ -5", Color.red);
+            ShowFeedback("Mauvaise recette -5", Color.red);
 
             ClearPlateAndCooking();
         }
     }
 
     void GenerateRandomRecipe()
-    {
-        targetRecipe.Clear();
+{
+    targetRecipe.Clear();
 
-        targetRecipe.Add("Pain");
+    targetRecipe.Add("Pain");
 
-        if (Random.value > 0.5f) targetRecipe.Add("Steak Cuit");
-        if (Random.value > 0.5f) targetRecipe.Add("Fromage");
-        if (Random.value > 0.5f) targetRecipe.Add("Tomate");
-        if (Random.value > 0.5f) targetRecipe.Add("Salade");
+    if (Random.value > 0.5f) targetRecipe.Add("Steak Cuit");
+    if (Random.value > 0.5f) targetRecipe.Add("Fromage");
+    if (Random.value > 0.5f) targetRecipe.Add("Tomate");
+    if (Random.value > 0.5f) targetRecipe.Add("Salade");
 
-        orderText.text = string.Join(" + ", targetRecipe);
-    }
+    // Frites parfois demandées
+    if (Random.value > 0.6f) targetRecipe.Add("Frites");
+
+    orderText.text = string.Join(" + ", targetRecipe);
+}
 
     void ClearPlateAndCooking()
     {
@@ -308,7 +334,7 @@ public class GameManager : MonoBehaviour
     {
         if (prefab == null)
         {
-            Debug.LogError("Prefab steak manquant !");
+            Debug.LogError("Prefab steak manquant");
             return;
         }
 
@@ -329,7 +355,7 @@ public class GameManager : MonoBehaviour
         CanvasGroup cg = currentSpawnedSteak.GetComponent<CanvasGroup>();
         if (cg != null)
         {
-            cg.alpha = 1;
+            cg.alpha = 1f;
             cg.interactable = true;
             cg.blocksRaycasts = true;
         }
@@ -406,12 +432,17 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         if (friesCooking) return;
+        if (friesPortionsLeft > 0) return;
 
         friesCooking = true;
         friesTimer = friesCookingTime;
+        friesPortionsLeft = 0;
 
         if (normalBackground != null)
             normalBackground.SetActive(false);
+
+        if (fryerReadyBackground != null)
+            fryerReadyBackground.SetActive(false);
 
         if (fryerCookingBackground != null)
             fryerCookingBackground.SetActive(true);
@@ -419,7 +450,7 @@ public class GameManager : MonoBehaviour
         if (friesReadyItem != null)
             friesReadyItem.SetActive(false);
 
-        ShowFeedback("🍟 cuisson...", Color.yellow);
+        ShowFeedback("Frites en cuisson", Color.yellow);
     }
 
     void UpdateFryer()
@@ -431,24 +462,48 @@ public class GameManager : MonoBehaviour
         if (friesTimer <= 0f)
         {
             friesCooking = false;
+            friesPortionsLeft = maxFriesPortions;
 
             if (normalBackground != null)
-                normalBackground.SetActive(true);
+                normalBackground.SetActive(false);
 
             if (fryerCookingBackground != null)
                 fryerCookingBackground.SetActive(false);
 
+            if (fryerReadyBackground != null)
+                fryerReadyBackground.SetActive(true);
+
             if (friesReadyItem != null)
                 friesReadyItem.SetActive(true);
 
-            ShowFeedback("🍟 prêt", Color.green);
+            ShowFeedback("Frites pretes x" + friesPortionsLeft, Color.green);
         }
     }
 
     public void FriesTaken()
     {
-        if (friesReadyItem != null)
-            friesReadyItem.SetActive(false);
+        if (friesPortionsLeft <= 0) return;
+
+        friesPortionsLeft--;
+
+        ShowFeedback("Portion frites reste " + friesPortionsLeft, Color.yellow);
+
+        if (friesPortionsLeft <= 0)
+        {
+            if (friesReadyItem != null)
+                friesReadyItem.SetActive(false);
+
+            if (fryerReadyBackground != null)
+                fryerReadyBackground.SetActive(false);
+
+            if (fryerCookingBackground != null)
+                fryerCookingBackground.SetActive(false);
+
+            if (normalBackground != null)
+                normalBackground.SetActive(true);
+
+            ShowFeedback("Bac frites vide", Color.yellow);
+        }
     }
 
     public void TrashIngredient(string ingredient)
@@ -460,6 +515,7 @@ public class GameManager : MonoBehaviour
 
         score = Mathf.Max(0, score - trashCount);
         scoreText.text = score.ToString();
+        UpdateComboText();
 
         if (ingredient == "Steak Cuit")
             CookedSteakTaken();
@@ -470,7 +526,7 @@ public class GameManager : MonoBehaviour
         if (ingredient == "Frites")
             FriesTaken();
 
-        ShowFeedback("🗑 -" + trashCount, Color.yellow);
+        ShowFeedback("Jete -" + trashCount, Color.yellow);
     }
 
     void ShowFeedback(string message, Color color)

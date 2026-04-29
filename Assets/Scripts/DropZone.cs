@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public class DropZone : MonoBehaviour, IDropHandler
 {
     public Transform plateContent;
+    public Transform friesPlateContent;
 
     public Sprite painBasSprite;
     public Sprite painHautSprite;
@@ -13,13 +14,15 @@ public class DropZone : MonoBehaviour, IDropHandler
     public Sprite tomateSprite;
     public Sprite saladeSprite;
     public Sprite steakBruleSprite;
+    public Sprite fritesSprite;
 
-    private bool hasPain = false;
-    private bool hasSteak = false;
-    private bool hasFromage = false;
-    private bool hasTomate = false;
-    private bool hasSalade = false;
-    private bool hasSteakBrule = false;
+    private bool hasPain;
+    private bool hasSteak;
+    private bool hasFromage;
+    private bool hasTomate;
+    private bool hasSalade;
+    private bool hasSteakBrule;
+    private bool hasFrites;
 
     public void OnDrop(PointerEventData eventData)
     {
@@ -29,25 +32,21 @@ public class DropZone : MonoBehaviour, IDropHandler
         string ingredient = item.ingredientName;
 
         GameManager gm = FindObjectOfType<GameManager>();
-
         if (gm != null)
-        {
             gm.AddIngredient(ingredient);
-        }
 
-        AddVisualIngredient(ingredient);
+        if (ingredient == "Frites")
+            AddFriesVisual();
+        else
+            AddVisualIngredient(ingredient);
+
         item.MarkDropped();
 
         if (gm != null)
         {
-            if (ingredient == "Steak Cuit")
-                gm.CookedSteakTaken();
-
-            if (ingredient == "Steak Brûlé")
-                gm.BurntSteakTaken();
-
-            if (ingredient == "Frites")
-                gm.FriesTaken();
+            if (ingredient == "Steak Cuit") gm.CookedSteakTaken();
+            if (ingredient == "Steak Brûlé") gm.BurntSteakTaken();
+            if (ingredient == "Frites") gm.FriesTaken();
         }
     }
 
@@ -74,9 +73,25 @@ public class DropZone : MonoBehaviour, IDropHandler
         RebuildBurgerVisual();
     }
 
+    void AddFriesVisual()
+    {
+        hasFrites = true;
+
+        if (friesPlateContent == null)
+        {
+            Debug.LogWarning("FriesPlateContent non relié");
+            return;
+        }
+
+        foreach (Transform child in friesPlateContent)
+            Destroy(child.gameObject);
+
+        CreateFriesLayer();
+    }
+
     void RebuildBurgerVisual()
     {
-        ClearVisualObjectsOnly();
+        ClearBurgerOnly();
 
         float y = -80f;
 
@@ -124,11 +139,7 @@ public class DropZone : MonoBehaviour, IDropHandler
 
     void CreateLayer(string name, Sprite sprite, Vector2 size, float y)
     {
-        if (sprite == null)
-        {
-            Debug.LogWarning("Sprite manquant : " + name);
-            return;
-        }
+        if (sprite == null) return;
 
         GameObject obj = new GameObject(name);
         obj.transform.SetParent(plateContent, false);
@@ -144,7 +155,25 @@ public class DropZone : MonoBehaviour, IDropHandler
         rt.anchoredPosition = new Vector2(0, y);
     }
 
-    void ClearVisualObjectsOnly()
+    void CreateFriesLayer()
+    {
+        if (fritesSprite == null) return;
+
+        GameObject obj = new GameObject("Frites");
+        obj.transform.SetParent(friesPlateContent, false);
+
+        Image img = obj.AddComponent<Image>();
+        img.sprite = fritesSprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        img.color = Color.white;
+
+        RectTransform rt = obj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(150, 70);
+        rt.anchoredPosition = Vector2.zero;
+    }
+
+    void ClearBurgerOnly()
     {
         foreach (Transform child in plateContent)
             Destroy(child.gameObject);
@@ -158,7 +187,14 @@ public class DropZone : MonoBehaviour, IDropHandler
         hasTomate = false;
         hasSalade = false;
         hasSteakBrule = false;
+        hasFrites = false;
 
-        ClearVisualObjectsOnly();
+        ClearBurgerOnly();
+
+        if (friesPlateContent != null)
+        {
+            foreach (Transform child in friesPlateContent)
+                Destroy(child.gameObject);
+        }
     }
 }
