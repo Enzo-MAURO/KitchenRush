@@ -201,21 +201,133 @@ public class GameManager : MonoBehaviour
     }
 
     void GenerateRandomRecipe()
+{
+    targetRecipe.Clear();
+
+    string orderDisplay = "";
+
+    int orderType = Random.Range(0, 5);
+
+    // 0 = Burger seul
+    // 1 = Burger + boisson
+    // 2 = Burger + frites
+    // 3 = Menu complet
+    // 4 = Petite commande sans burger
+
+    if (orderType == 0)
     {
-        targetRecipe.Clear();
+        AddRandomBurger(ref orderDisplay);
+    }
+    else if (orderType == 1)
+    {
+        AddRandomBurger(ref orderDisplay);
+        AddRandomDrink(ref orderDisplay);
+    }
+    else if (orderType == 2)
+    {
+        AddRandomBurger(ref orderDisplay);
+        AddFries(ref orderDisplay);
+    }
+    else if (orderType == 3)
+    {
+        AddRandomBurger(ref orderDisplay);
+        AddRandomDrink(ref orderDisplay);
+        AddFries(ref orderDisplay);
+    }
+    else
+    {
+        int smallOrder = Random.Range(0, 3);
 
-        targetRecipe.Add("Pain");
-
-        if (Random.value > 0.5f) targetRecipe.Add("Steak Cuit");
-        if (Random.value > 0.5f) targetRecipe.Add("Fromage");
-        if (Random.value > 0.5f) targetRecipe.Add("Tomate");
-        if (Random.value > 0.5f) targetRecipe.Add("Salade");
-
-        if (Random.value > 0.6f) targetRecipe.Add("Frites");
-
-        orderText.text = string.Join(" + ", targetRecipe);
+        if (smallOrder == 0)
+            AddRandomDrink(ref orderDisplay);
+        else if (smallOrder == 1)
+            AddFries(ref orderDisplay);
+        else
+        {
+            AddRandomDrink(ref orderDisplay);
+            AddFries(ref orderDisplay);
+        }
     }
 
+    orderText.text = orderDisplay;
+}
+
+    void AddRandomBurger(ref string orderDisplay)
+{
+    int burgerType = Random.Range(0, 5);
+
+    List<string> burger = new List<string>();
+
+    // Tous les burgers ont du pain
+    burger.Add("Pain");
+
+    if (burgerType == 0)
+    {
+        // Cheeseburger simple
+        burger.Add("Steak Cuit");
+        burger.Add("Fromage");
+    }
+    else if (burgerType == 1)
+    {
+        // Burger classique
+        burger.Add("Steak Cuit");
+        burger.Add("Fromage");
+        burger.Add("Tomate");
+    }
+    else if (burgerType == 2)
+    {
+        // Burger salade tomate
+        burger.Add("Steak Cuit");
+        burger.Add("Salade");
+        burger.Add("Tomate");
+    }
+    else if (burgerType == 3)
+    {
+        // Burger complet
+        burger.Add("Steak Cuit");
+        burger.Add("Fromage");
+        burger.Add("Tomate");
+        burger.Add("Salade");
+    }
+    else
+    {
+        // Burger végétarien simple
+        burger.Add("Fromage");
+        burger.Add("Tomate");
+        burger.Add("Salade");
+    }
+
+    targetRecipe.AddRange(burger);
+
+    orderDisplay += "Burger :\n";
+
+    foreach (string ingredient in burger)
+    {
+        orderDisplay += "- " + ingredient + "\n";
+    }
+
+    orderDisplay += "\n";
+}
+
+void AddRandomDrink(ref string orderDisplay)
+{
+    string[] drinks = { "Coca", "Fanta", "Sprite", "Eau" };
+
+    string drink = drinks[Random.Range(0, drinks.Length)];
+
+    targetRecipe.Add(drink);
+
+    orderDisplay += "Boisson :\n";
+    orderDisplay += "- " + drink + "\n";
+}
+
+void AddFries(ref string orderDisplay)
+{
+    targetRecipe.Add("Frites");
+
+    orderDisplay += "Frites :\n";
+    orderDisplay += "- Une portion\n";
+}
     void ClearPlateAndCooking()
     {
         currentIngredients.Clear();
