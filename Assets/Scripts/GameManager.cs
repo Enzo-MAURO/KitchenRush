@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text timerText;
     public TMP_Text comboText;
     public TMP_Text feedbackText;
+    public TMP_Text fryerTimerText;
 
     [Header("Game Over")]
     public GameObject gameOverPanel;
@@ -39,7 +40,7 @@ public class GameManager : MonoBehaviour
     public GameObject fryerCookingBackground;
     public GameObject fryerReadyBackground;
     public GameObject friesReadyItem;
-    public float friesCookingTime = 15f;
+    public float friesCookingTime = 10f;
     public int maxFriesPortions = 3;
 
     private float friesTimer = 0f;
@@ -71,8 +72,8 @@ public class GameManager : MonoBehaviour
         timerText.text = FormatTime(timeLeft);
         UpdateComboText();
 
-        if (feedbackText != null)
-            feedbackText.text = "";
+        if (feedbackText != null) feedbackText.text = "";
+        if (fryerTimerText != null) fryerTimerText.text = "";
 
         if (gameOverPanel != null)
             gameOverPanel.SetActive(false);
@@ -133,11 +134,7 @@ public class GameManager : MonoBehaviour
     void UpdateComboText()
     {
         if (comboText == null) return;
-
-        if (comboCount <= 0)
-            comboText.text = "x0";
-        else
-            comboText.text = "x" + comboCount;
+        comboText.text = comboCount <= 0 ? "x0" : "x" + comboCount;
     }
 
     public void AddIngredient(string ingredient)
@@ -204,21 +201,20 @@ public class GameManager : MonoBehaviour
     }
 
     void GenerateRandomRecipe()
-{
-    targetRecipe.Clear();
+    {
+        targetRecipe.Clear();
 
-    targetRecipe.Add("Pain");
+        targetRecipe.Add("Pain");
 
-    if (Random.value > 0.5f) targetRecipe.Add("Steak Cuit");
-    if (Random.value > 0.5f) targetRecipe.Add("Fromage");
-    if (Random.value > 0.5f) targetRecipe.Add("Tomate");
-    if (Random.value > 0.5f) targetRecipe.Add("Salade");
+        if (Random.value > 0.5f) targetRecipe.Add("Steak Cuit");
+        if (Random.value > 0.5f) targetRecipe.Add("Fromage");
+        if (Random.value > 0.5f) targetRecipe.Add("Tomate");
+        if (Random.value > 0.5f) targetRecipe.Add("Salade");
 
-    // Frites parfois demandées
-    if (Random.value > 0.6f) targetRecipe.Add("Frites");
+        if (Random.value > 0.6f) targetRecipe.Add("Frites");
 
-    orderText.text = string.Join(" + ", targetRecipe);
-}
+        orderText.text = string.Join(" + ", targetRecipe);
+    }
 
     void ClearPlateAndCooking()
     {
@@ -281,14 +277,9 @@ public class GameManager : MonoBehaviour
         burntSteakReady = false;
         cookedSteakTimer = 5f;
 
-        if (cookingSteakItem != null)
-            cookingSteakItem.SetActive(false);
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
+        if (cookingSteakItem != null) cookingSteakItem.SetActive(false);
+        if (cookedSteakItem != null) cookedSteakItem.SetActive(false);
+        if (burntSteakItem != null) burntSteakItem.SetActive(false);
 
         ClearSpawnedSteak();
         SpawnSteakPrefab(steakCuitPrefab);
@@ -312,14 +303,9 @@ public class GameManager : MonoBehaviour
         cookedSteakReady = false;
         burntSteakReady = true;
 
-        if (cookingSteakItem != null)
-            cookingSteakItem.SetActive(false);
-
-        if (cookedSteakItem != null)
-            cookedSteakItem.SetActive(false);
-
-        if (burntSteakItem != null)
-            burntSteakItem.SetActive(false);
+        if (cookingSteakItem != null) cookingSteakItem.SetActive(false);
+        if (cookedSteakItem != null) cookedSteakItem.SetActive(false);
+        if (burntSteakItem != null) burntSteakItem.SetActive(false);
 
         if (cookingSlider != null)
             cookingSlider.value = 100f;
@@ -362,11 +348,7 @@ public class GameManager : MonoBehaviour
 
         DraggableItem drag = currentSpawnedSteak.GetComponent<DraggableItem>();
         if (drag != null)
-        {
             drag.destroyAfterDrop = true;
-        }
-
-        Debug.Log("Steak spawned : " + currentSpawnedSteak.name);
     }
 
     void ClearSpawnedSteak()
@@ -450,6 +432,9 @@ public class GameManager : MonoBehaviour
         if (friesReadyItem != null)
             friesReadyItem.SetActive(false);
 
+        if (fryerTimerText != null)
+            fryerTimerText.text = Mathf.Ceil(friesTimer).ToString();
+
         ShowFeedback("Frites en cuisson", Color.yellow);
     }
 
@@ -459,10 +444,16 @@ public class GameManager : MonoBehaviour
 
         friesTimer -= Time.deltaTime;
 
+        if (fryerTimerText != null)
+            fryerTimerText.text = Mathf.Ceil(friesTimer).ToString();
+
         if (friesTimer <= 0f)
         {
             friesCooking = false;
             friesPortionsLeft = maxFriesPortions;
+
+            if (fryerTimerText != null)
+                fryerTimerText.text = "";
 
             if (normalBackground != null)
                 normalBackground.SetActive(false);
@@ -501,6 +492,9 @@ public class GameManager : MonoBehaviour
 
             if (normalBackground != null)
                 normalBackground.SetActive(true);
+
+            if (fryerTimerText != null)
+                fryerTimerText.text = "";
 
             ShowFeedback("Bac frites vide", Color.yellow);
         }

@@ -4,6 +4,15 @@ using UnityEngine.UI;
 
 public class DropZone : MonoBehaviour, IDropHandler
 {
+    public Transform drinksPlateContent;
+
+    public Sprite cocaSprite;
+    public Sprite fantaSprite;
+    public Sprite spriteSprite;
+    public Sprite eauSprite;
+
+    private bool hasDrink = false;
+    private string currentDrink = "";
     public Transform plateContent;
     public Transform friesPlateContent;
 
@@ -48,6 +57,19 @@ public class DropZone : MonoBehaviour, IDropHandler
             if (ingredient == "Steak Brûlé") gm.BurntSteakTaken();
             if (ingredient == "Frites") gm.FriesTaken();
         }
+
+        if (ingredient == "Coca" || ingredient == "Fanta" || ingredient == "Sprite" || ingredient == "Eau")
+        {
+            AddDrinkVisual(ingredient);
+        }
+        else if (ingredient == "Frites")
+        {
+            AddFriesVisual();
+        }
+        else
+        {
+            AddVisualIngredient(ingredient);
+        }
     }
 
     DraggableItem GetDraggedItem(PointerEventData eventData)
@@ -89,6 +111,37 @@ public class DropZone : MonoBehaviour, IDropHandler
         CreateFriesLayer();
     }
 
+    void AddDrinkVisual(string drink)
+    {
+        hasDrink = true;
+        currentDrink = drink;
+
+        if (drinksPlateContent == null) return;
+
+    foreach (Transform child in drinksPlateContent)
+            Destroy(child.gameObject);
+
+        Sprite sprite = null;
+
+        if (drink == "Coca") sprite = cocaSprite;
+        if (drink == "Fanta") sprite = fantaSprite;
+        if (drink == "Sprite") sprite = spriteSprite;
+        if (drink == "Eau") sprite = eauSprite;
+
+        if (sprite == null) return;
+
+        GameObject obj = new GameObject(drink);
+        obj.transform.SetParent(drinksPlateContent, false);
+
+        Image img = obj.AddComponent<Image>();
+        img.sprite = sprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+
+        RectTransform rt = obj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(80, 80);
+        rt.anchoredPosition = Vector2.zero;
+    }
     void RebuildBurgerVisual()
     {
         ClearBurgerOnly();
@@ -188,8 +241,18 @@ public class DropZone : MonoBehaviour, IDropHandler
         hasSalade = false;
         hasSteakBrule = false;
         hasFrites = false;
+        hasDrink = false;
+        currentDrink = "";
 
         ClearBurgerOnly();
+
+        if (drinksPlateContent != null)
+        {
+            foreach (Transform child in drinksPlateContent)
+            {
+                Destroy(child.gameObject);
+            }
+        }
 
         if (friesPlateContent != null)
         {
