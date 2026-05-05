@@ -43,4 +43,9 @@ public class MenuNavigation : MonoBehaviour
         Debug.Log("Quitter le jeu");
         Application.Quit();
     }
+
+    public void BackToWorldMap()
+    {
+        SceneManager.LoadScene("WorldMap");
+    }
 }
