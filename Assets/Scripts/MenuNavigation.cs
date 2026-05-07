@@ -35,7 +35,7 @@ public class MenuNavigation : MonoBehaviour
 
     public void GoToGame()
     {
-        SceneManager.LoadScene("GameScene");
+        SceneManager.LoadScene("GameSceneCH1-1");
     }
 
     public void QuitGame()
